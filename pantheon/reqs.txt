@@ -1,0 +1,19 @@
+# Requirements:
+
+python 3
+
+pip package manager
+https://pip.pypa.io/en/stable/installing/
+
+scipy
+$pip install scipy
+
+matplotlib
+$pip install matplotlib
+
+numpy
+$pip install numpy
+
+pandas
+$pip install pandas 
+ 

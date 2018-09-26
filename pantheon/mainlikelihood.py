@@ -53,13 +53,16 @@ print('Import successful')
 
 # Reshape to matrix
 print('\n' + 'Building covariance matrix...')
-covarianceMatrix = np.reshape(covarianceData, (1048, 1048))
+# diagonalise magnitude errors
+dStat = np.diag(dmb)
+# C = cSys + dStat (covmat)
+covarianceMatrix = np.reshape(covarianceData, (1048, 1048)) + dStat
+
 print('Build successful')
 
 # Display matrix info
-print('\n' + 'Covariance Matrix ("sys_full_long.txt")')
+print('\n' + 'Covariance Matrix')
 print('Dimensions: ''Columns: ' + str(len(covarianceMatrix)) +'  Rows: ' + str(len(covarianceMatrix[0])))
-
 '''
 Model generation
 '''
@@ -68,12 +71,11 @@ H = 70 #H0
 c = 3e8 #so
 hubDist = (c / H) * 10 ** -3
 
-omegaM = 0.28 #matter density
-omegaL = 0.72 # lambda density
+omegaM = 0.3 #matter density
+omegaL = 0.7 # lambda density
 omegaK = 0 # curvature density
 
-muModelData = []
-
+#lumDists = []
 
 def muModel(z,omegaM,omegaL,omegaK):
     E =  np.sqrt(omegaM * (1 + z) ** (3) + (omegaK * (1 + z) ** 2) + omegaL)
@@ -81,27 +83,39 @@ def muModel(z,omegaM,omegaL,omegaK):
     integrand = integrate.quad(lambda z: E ** (-1), 0, z)[0]
     ## luminosity distance = hubble distance * (1 + z) * integrand
     lumDist = hubDist * (1 + z) * integrand
-    mu = 5 * np.log10(lumDist * 10 ** 5) - 19
+    #lumDists.append(lumDist)
+    mu = 5 * np.log10(lumDist * 10 ** 5)
 
     return mu
 
-for i in range(len(zcmbArray)):
-    mui = muModel(zcmbArray[i],omegaM,omegaL,omegaK)
-    muModelData.append(mui)
 
+def modelGenerate(zcmbArray,omegaM,omegaL,omegaK):
+    # build model data
+    muModelData = []
+    for i in range(len(zcmbArray)):
+        mui = muModel(zcmbArray[i],omegaM,omegaL,omegaK)
+        muModelData.append(mui)
 
-'''
-Parameter space
-'''
-omegaMmin = 0
-omegaMmax = 3
-omegaLmin = 0
-omegaLmax = 3
+    # initial residuals for model
+    residuals = mb - muModelData
+    # weight of residuals using errors
+    weight = []
+    for i in range(len(dmb)):
+        w = dmb[i] / sum(dmb)
+        weight.append(w)
+    # def scriptm
+    scriptm = sum(residuals*weight)
+    print('\n')
+    print('scriptm:',scriptm)
+    # add scriptm to model
+    muModelData = muModelData + scriptm
 
-stepsize = 0.01
-print('\n','Parameters to vary: omegaM, omegaL')
-print('Generating parameter space...')
-print('Step size: ', stepsize)
+    # final residuals with scriptm
+    likeResiduals = np.matrix(mb - muModelData)
+    # likelihood
+    likeValue = likeResiduals * np.linalg.inv(covarianceMatrix) * likeResiduals.getH()
+    print('likelihood:', round(float(likeValue),4))
 
-omegaMpace = np.arange(omegaMmin,omegaMmax,stepsize)
-omegaLspace = np.arange(omegaLmin,omegaLmax,stepsize)
+modelGenerate(zcmbArray,0.3,0.7,0)
+
+###acceptsnce rate ~ 0.3

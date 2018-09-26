@@ -4,8 +4,7 @@ Supernovae Monte Carlo in python.
 ### Currently Under Construction:
   - Pantheon supernovae module
 
-### Developers:
+### Developer:
 - Adam Stewart (adam@akurate.com.au)
-- Andrew Stewart
 
 please see: requirements ('reqs.txt')

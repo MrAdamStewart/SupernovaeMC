@@ -104,13 +104,14 @@ def likelihood(zcmbArray,omegaM,omegaL,omegaK):
         weight.append(w)
     # def scriptm
     scriptm = sum(residuals*weight)
+    print(scriptm)
     # add scriptm to model
     muModelData = muModelData + scriptm
     # final residuals with scriptm
     likeResiduals = np.matrix(mb - muModelData)
     # likelihood value
     likeValue = likeResiduals * np.linalg.inv(covarianceMatrix) * likeResiduals.getH()
-    print('likelihood:', round(float(likeValue),4))
+    #print('likelihood:', round(float(likeValue),4))
 
     return likeValue
 
@@ -121,6 +122,9 @@ omegaLmin = 0
 omegaLmax = 2
 stepsize = 0.01
 
+omegaMx = []
+omegaLy = []
+
 
 def start(omegaMmin,omegaMmax,omegaLmin,omegaLmax,stepsize):
     omegaM = random.uniform(omegaMmin,omegaMmax)
@@ -128,20 +132,26 @@ def start(omegaMmin,omegaMmax,omegaLmin,omegaLmax,stepsize):
     print('omegam',omegaM)
     print('omegal',omegaL)
     l = []
-    for i in range(0,1000):
-        l.append(likelihood(zcmbArray,omegaM,omegaL,omegaK))
+    for i in range(0,2000):
+        print(i)
+        print('m:',omegaM)
+        print('l:',omegaL)
+        omegaMx.append(omegaM)
+        omegaLy.append(omegaL)
+        like1 = likelihood(zcmbArray,omegaM,omegaL,omegaK)
+        l.append(like1)
+        print('likelihood:', round(float(like1),4))
         jump(omegaM,omegaL,stepsize)
-        print('omegam',omegaMnew)
-        print('omegal',omegaLnew)
-        l.append(likelihood(zcmbArray,omegaMnew,omegaLnew,omegaK))
+        like2 = likelihood(zcmbArray,omegaMnew,omegaLnew,omegaK)
+        l.append(like2)
         if l[i] < l[i+1]:
-            pass
+            omegaM = omegaMnew
+            omegaL = omegaLnew
         else:
             r = random.uniform(0,1)
             if r > l[i+1]/l[i]:
                 pass
             else:
-                pass
                 omegaM = omegaMnew
                 omegaL = omegaLnew
 
@@ -157,4 +167,10 @@ def jump(omegaM,omegaL,stepsize):
     return omegaMnew,omegaLnew
 
 start(0.2,0.4,0.6,1,0.01)
+file1 = open('testfile.txt','w')
+file2 = open('testfile2.txt','w')
+print(np.column_stack((omegaMx,omegaLy)))
 ###acceptsnce rate ~ 0.3
+
+plt.plot(omegaMx,omegaLy,'kx')
+plt.show()

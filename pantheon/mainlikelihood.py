@@ -104,7 +104,7 @@ def likelihood(zcmbArray,omegaM,omegaL,omegaK):
         weight.append(w)
     # def scriptm
     scriptm = sum(residuals*weight)
-    print(scriptm)
+    #print(scriptm)
     # add scriptm to model
     muModelData = muModelData + scriptm
     # final residuals with scriptm
@@ -120,27 +120,24 @@ omegaMmin = 0
 omegaMmax = 1.5
 omegaLmin = 0
 omegaLmax = 2
-stepsize = 0.01
+stepsize = 0.1
 
 omegaMx = []
 omegaLy = []
-
-
-def start(omegaMmin,omegaMmax,omegaLmin,omegaLmax,stepsize):
+weighta = []
+def start(omegaMmin,omegaMmax,omegaLmin,omegaLmax,stepsize,its):
     omegaM = random.uniform(omegaMmin,omegaMmax)
     omegaL = random.uniform(omegaLmin,omegaLmax)
     print('omegam',omegaM)
     print('omegal',omegaL)
     l = []
-    for i in range(0,2000):
-        print(i)
-        print('m:',omegaM)
-        print('l:',omegaL)
+    for i in range(0,its):
         omegaMx.append(omegaM)
         omegaLy.append(omegaL)
+        weight = 1
         like1 = likelihood(zcmbArray,omegaM,omegaL,omegaK)
         l.append(like1)
-        print('likelihood:', round(float(like1),4))
+        print(i,'m:',round(omegaM,7),'l:',round(omegaL,7),'likelihood:', round(float(like1),4))
         jump(omegaM,omegaL,stepsize)
         like2 = likelihood(zcmbArray,omegaMnew,omegaLnew,omegaK)
         l.append(like2)
@@ -148,13 +145,13 @@ def start(omegaMmin,omegaMmax,omegaLmin,omegaLmax,stepsize):
             omegaM = omegaMnew
             omegaL = omegaLnew
         else:
-            r = random.uniform(0,1)
+            r = random.uniform(0.3,1)
             if r > l[i+1]/l[i]:
-                pass
-            else:
+                weight = weight + 1
+            if r < l[i+1]/l[i]:
                 omegaM = omegaMnew
                 omegaL = omegaLnew
-
+        weighta.append(weight)
 
 def jump(omegaM,omegaL,stepsize):
     global omegaMnew
@@ -166,11 +163,16 @@ def jump(omegaM,omegaL,stepsize):
 
     return omegaMnew,omegaLnew
 
-start(0.2,0.4,0.6,1,0.01)
-file1 = open('testfile.txt','w')
-file2 = open('testfile2.txt','w')
-print(np.column_stack((omegaMx,omegaLy)))
+start(0.2,0.4,0.6,1,0.01,5000)
 ###acceptsnce rate ~ 0.3
 
-plt.plot(omegaMx,omegaLy,'kx')
-plt.show()
+print('m mean',np.mean(omegaMx))
+print('m std',np.std(omegaMx))
+
+print('l mean',np.mean(omegaLy))
+print('l std',np.std(omegaLy))
+
+
+np.savetxt('omegaM.txt',(omegaMx))
+np.savetxt('omegaL.txt',omegaLy)
+np.savetxt('weight.txt', weighta)

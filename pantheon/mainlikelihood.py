@@ -4,6 +4,10 @@ import matplotlib.pyplot as plt
 import scipy.integrate as integrate
 import random
 import math
+import time
+
+
+
 # module settings
 np.set_printoptions(threshold=2000000)
 pd.options.display.max_rows = 2000
@@ -104,7 +108,6 @@ def likelihood(zcmbArray,omegaM,omegaL,omegaK):
         weight.append(w)
     # def scriptm
     scriptm = sum(residuals*weight)
-    #print(scriptm)
     # add scriptm to model
     muModelData = muModelData + scriptm
     # final residuals with scriptm
@@ -120,38 +123,61 @@ omegaMmin = 0
 omegaMmax = 1.5
 omegaLmin = 0
 omegaLmax = 2
-stepsize = 0.1
+stepsize = 0.01
 
 omegaMx = []
 omegaLy = []
-weighta = []
-def start(omegaMmin,omegaMmax,omegaLmin,omegaLmax,stepsize,its):
+
+
+def start(omegaMmin,omegaMmax,omegaLmin,omegaLmax,stepsize,iterations):
     omegaM = random.uniform(omegaMmin,omegaMmax)
     omegaL = random.uniform(omegaLmin,omegaLmax)
     print('omegam',omegaM)
     print('omegal',omegaL)
     l = []
-    for i in range(0,its):
-        omegaMx.append(omegaM)
-        omegaLy.append(omegaL)
-        weight = 1
+    for i in range(0,iterations):
+        global like
+        global tElapsed
+
+        t1 = time.clock()
+
+        omegaMx.append(round(omegaM,7))
+        omegaLy.append(round(omegaL,7))
+
+        if omegaM < 0:
+            omegaM = 0.001
+        if omegaL <  0:
+            omegaL = 0.001 #... no negative densities.#
+
         like1 = likelihood(zcmbArray,omegaM,omegaL,omegaK)
-        l.append(like1)
-        print(i,'m:',round(omegaM,7),'l:',round(omegaL,7),'likelihood:', round(float(like1),4))
+
         jump(omegaM,omegaL,stepsize)
+
         like2 = likelihood(zcmbArray,omegaMnew,omegaLnew,omegaK)
+
+        l.append(like1)
         l.append(like2)
+
         if l[i] < l[i+1]:
             omegaM = omegaMnew
             omegaL = omegaLnew
         else:
-            r = random.uniform(0.3,1)
+            r = random.uniform(0,1)
             if r > l[i+1]/l[i]:
-                weight = weight + 1
-            if r < l[i+1]/l[i]:
+                pass
+            else:
                 omegaM = omegaMnew
                 omegaL = omegaLnew
-        weighta.append(weight)
+
+        if like2 < like1:
+            like = like2
+        else:
+            like = like1
+
+        tElapsed = str(round(time.clock() - t1, 2))
+
+        print('Iteration: ' + str(i) + '     Time Taken: ' + tElapsed)
+
 
 def jump(omegaM,omegaL,stepsize):
     global omegaMnew
@@ -163,16 +189,23 @@ def jump(omegaM,omegaL,stepsize):
 
     return omegaMnew,omegaLnew
 
-start(0.2,0.4,0.6,1,0.01,5000)
+
+iterations = 10000
+stepsize = 0.02
+
+#random start point in between these values
+omegaM_min = 0
+omegaM_max = 1
+
+omegaL_min = 0
+omegaL_max = 1
+
+start(omegaMmin,omegaM_max,omegaL_min,omegaL_max,stepsize,iterations)
+
+data = np.column_stack((omegaMx,omegaLy))
+np.savetxt('densityparameters.txt', data, header='omega_M , omega_L', comments='#stepsize 0.02')
+
 ###acceptsnce rate ~ 0.3
 
-print('m mean',np.mean(omegaMx))
-print('m std',np.std(omegaMx))
-
-print('l mean',np.mean(omegaLy))
-print('l std',np.std(omegaLy))
-
-
-np.savetxt('omegaM.txt',(omegaMx))
-np.savetxt('omegaL.txt',omegaLy)
-np.savetxt('weight.txt', weighta)
+plt.plot(omegaMx,omegaLy,'kx')
+plt.show()

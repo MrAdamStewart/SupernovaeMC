@@ -135,14 +135,11 @@ def start(omegaMmin,omegaMmax,omegaLmin,omegaLmax,stepsize,iterations):
     print('omegam',omegaM)
     print('omegal',omegaL)
     l = []
-    for i in range(0,iterations):
+    for i in range(1,iterations):
         global like
         global tElapsed
 
         t1 = time.clock()
-
-        omegaMx.append(round(omegaM,7))
-        omegaLy.append(round(omegaL,7))
 
         if omegaM < 0:
             omegaM = 0.001
@@ -155,28 +152,26 @@ def start(omegaMmin,omegaMmax,omegaLmin,omegaLmax,stepsize,iterations):
 
         like2 = likelihood(zcmbArray,omegaMnew,omegaLnew,omegaK)
 
-        l.append(like1)
-        l.append(like2)
-
-        if l[i] < l[i+1]:
+        if like1 < like2:
+            like = like2
             omegaM = omegaMnew
             omegaL = omegaLnew
         else:
             r = random.uniform(0,1)
-            if r > l[i+1]/l[i]:
-                pass
+            if r > like2 / like1:
+                like = like1
             else:
+                like = like2
                 omegaM = omegaMnew
                 omegaL = omegaLnew
 
-        if like2 < like1:
-            like = like2
-        else:
-            like = like1
+        omegaMx.append(round(omegaM,7))
+        omegaLy.append(round(omegaL,7))
 
         tElapsed = str(round(time.clock() - t1, 2))
-
-        print('Iteration: ' + str(i) + '     Time Taken: ' + tElapsed)
+        print('Iteration: ' + str(i) + '  M:' + str(omegaM) + ' L:' + str(omegaL) +
+        '     Time Taken: ' + tElapsed +
+         '    likelihood: ' + str(like))
 
 
 def jump(omegaM,omegaL,stepsize):
@@ -190,20 +185,20 @@ def jump(omegaM,omegaL,stepsize):
     return omegaMnew,omegaLnew
 
 
-iterations = 10000
-stepsize = 0.02
+iterations = 1000
+stepsize = 0.01
 
 #random start point in between these values
-omegaM_min = 0
-omegaM_max = 1
+omegaM_min = 0.1
+omegaM_max = 0.3
 
-omegaL_min = 0
-omegaL_max = 1
+omegaL_min = 0.6
+omegaL_max = 0.9
 
 start(omegaMmin,omegaM_max,omegaL_min,omegaL_max,stepsize,iterations)
 
 data = np.column_stack((omegaMx,omegaLy))
-np.savetxt('densityparameters.txt', data, header='omega_M , omega_L', comments='#stepsize 0.02')
+np.savetxt('densityparameters.txt', data, header='omega_M , omega_L')
 
 ###acceptsnce rate ~ 0.3
 

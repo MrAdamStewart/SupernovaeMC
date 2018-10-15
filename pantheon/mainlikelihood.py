@@ -69,35 +69,49 @@ print('Build successful')
 # Display matrix info
 print('--- Covariance Matrix ---')
 print('Dimensions: ''Columns: ' + str(len(covarianceMatrix)) +'  Rows: ' + str(len(covarianceMatrix[0])))
-'''
-Model generation
-'''
 
-H = 70 #H0
-c = 3e8 #so
-hubDist = (c / H) * 10 ** -3
+
+h = 0.7
+
+hubDist = 3000 / h
 
 omegaK = 0 # curvature density
 
 #lumDists = []
 
-def muModel(z,omegaM,omegaL,omegaK):
-    E =  np.sqrt(omegaM * (1 + z) ** (3) + (omegaK * (1 + z) ** 2) + omegaL)
+def muModel(z,omegaM,omegaL):
+    global omegaK
+    zz = z
+    omegaK = 1 - omegaM - omegaL
+    #E =  np.sqrt(omegaM * (1 + zz) ** 3 + omegaK * (1 + zz) ** 2 + omegaL)
     ## integrates 1/E from 0 to z
-    integrand = integrate.quad(lambda z: E ** (-1), 0, z)[0]
-    ## luminosity distance = hubble distance * (1 + z) * integrand
-    lumDist = hubDist * (1 + z) * integrand
-    #lumDists.append(lumDist)
-    mu = 5 * np.log10(lumDist * 10 ** 5)
+    #print(1 / E)
+    integral = integrate.quad(lambda zz: 1 / (np.sqrt(omegaM * (1 + zz) ** 3 + omegaK * (1 + zz) ** 2 + omegaL)), 0, z)[0]
+    comovingDistance = hubDist * integral
+    if omegaK == 0:
+        comovingDistanceTransverse = comovingDistance
+    if omegaK > 0:
+        comovingDistanceTransverse = hubDist * 1 / math.sqrt(omegaK) * math.sinh(np.sqrt(omegaK) * comovingDistance / hubDist)
+    if omegaK < 0:
+        omegaKabs = abs(omegaK)
+        comovingDistanceTransverse = hubDist * 1 / math.sqrt(omegaKabs) * math.sin(math.sqrt(omegaKabs) * comovingDistance / hubDist)
+
+    angularDiameterDistance = comovingDistanceTransverse / (1 + z)
+
+    luminosityDistance = (1  + z) ** 2 * angularDiameterDistance
+
+    mu = 5 * np.log10(luminosityDistance * 1e5)
 
     return mu
 
 
-def likelihood(zcmbArray,omegaM,omegaL,omegaK):
+#print(muModel(1,0.3,0.7))
+
+def likelihood(zcmbArray,omegaM,omegaL):
     # build model data
     muModelData = []
     for i in range(len(zcmbArray)):
-        mui = muModel(zcmbArray[i],omegaM,omegaL,omegaK)
+        mui = muModel(zcmbArray[i],omegaM,omegaL)
         muModelData.append(mui)
     # initial residuals for model
     residuals = mb - muModelData
@@ -117,14 +131,21 @@ def likelihood(zcmbArray,omegaM,omegaL,omegaK):
     #print('likelihood:', round(float(likeValue),4))
 
     return likeValue
+'''
 
+likerange = [0] * 100
+for i in range(0,100):
+    omM = (0.01)  * i
+    loglik = float(likelihood(zcmbArray,omM,0.7))
+    likerange[i] = loglik
+    print(i)
 
-omegaMmin = 0
-omegaMmax = 1.5
-omegaLmin = 0
-omegaLmax = 2
-stepsize = 0.01
+omegaMrange = np.arange(0,1,0.01)
 
+plt.plot(omegaMrange,likerange,'kx')
+plt.savefig('fig1.png')
+plt.show()
+'''
 omegaMx = []
 omegaLy = []
 
@@ -141,37 +162,39 @@ def start(omegaMmin,omegaMmax,omegaLmin,omegaLmax,stepsize,iterations):
 
         t1 = time.clock()
 
-        if omegaM < 0:
-            omegaM = 0.001
-        if omegaL <  0:
-            omegaL = 0.001 #... no negative densities.#
-
-        like1 = likelihood(zcmbArray,omegaM,omegaL,omegaK)
+        like1 = likelihood(zcmbArray,omegaM,omegaL)
+        loglike1 = np.exp((- 1 / 2) * like1)
 
         jump(omegaM,omegaL,stepsize)
 
-        like2 = likelihood(zcmbArray,omegaMnew,omegaLnew,omegaK)
+        like2 = likelihood(zcmbArray,omegaMnew,omegaLnew)
+        loglike2 = np.exp((- 1 / 2) * like2)
 
-        if like1 < like2:
-            like = like2
+        likeratio = loglike2 / loglike1
+
+        if likeratio > 1:
+            like = loglike2
             omegaM = omegaMnew
             omegaL = omegaLnew
         else:
             r = random.uniform(0,1)
-            if r > like2 / like1:
-                like = like1
+            if likeratio < r:
+                like = loglike1
+                pass
             else:
-                like = like2
+                like = loglike2
                 omegaM = omegaMnew
                 omegaL = omegaLnew
+
+        if omegaM < 0:
+            omegaM = 0.001
 
         omegaMx.append(round(omegaM,7))
         omegaLy.append(round(omegaL,7))
 
         tElapsed = str(round(time.clock() - t1, 2))
-        print('Iteration: ' + str(i) + '  M:' + str(omegaM) + ' L:' + str(omegaL) +
-        '     Time Taken: ' + tElapsed +
-         '    likelihood: ' + str(like))
+        print(str(i) + ':' + '  M:' + str(round(omegaM,5)) + ' L:' + str(round(omegaL,5)) +
+        ' K:' + str(round(omegaK,4)) + '    likelihood: ' + str(like[0]))
 
 
 def jump(omegaM,omegaL,stepsize):
@@ -184,18 +207,17 @@ def jump(omegaM,omegaL,stepsize):
 
     return omegaMnew,omegaLnew
 
-
-iterations = 1000
-stepsize = 0.01
+iterations = 10000
+stepsize = 0.04
 
 #random start point in between these values
-omegaM_min = 0.1
-omegaM_max = 0.3
+omegaM_min = 0.2
+omegaM_max = 0.4
 
-omegaL_min = 0.6
-omegaL_max = 0.9
+omegaL_min = 0.5
+omegaL_max = 0.8
 
-start(omegaMmin,omegaM_max,omegaL_min,omegaL_max,stepsize,iterations)
+start(omegaM_min,omegaM_max,omegaL_min,omegaL_max,stepsize,iterations)
 
 data = np.column_stack((omegaMx,omegaLy))
 np.savetxt('densityparameters.txt', data, header='omega_M , omega_L')
@@ -203,4 +225,6 @@ np.savetxt('densityparameters.txt', data, header='omega_M , omega_L')
 ###acceptsnce rate ~ 0.3
 
 plt.plot(omegaMx,omegaLy,'kx')
+plt.xlim((0,1))
+plt.ylim((-1,2))
 plt.show()

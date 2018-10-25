@@ -115,32 +115,32 @@ count.append(0)
 
 def start(omegaMmin,omegaMmax,omegaLmin,omegaLmax,stepsize,iterations):
     c = 0
-    omegaM = random.uniform(omegaMmin,omegaMmax)
+    #omegaM = random.uniform(omegaMmin,omegaMmax)
     omegaL = random.uniform(omegaLmin,omegaLmax)
-    omegaK = 1 - omegaL - omegaM
-    omegaMArr.append(round(omegaM,5))
+    omegaK = 1 - omegaL
+    #omegaMArr.append(round(omegaM,5))
     omegaLArr.append(round(omegaL,5))
     omegaKArr.append(round(omegaK,5))
     weight = 1
     wAppend.append(int(weight))
-    print('Random starting point: ' + ' M=' + str(omegaM) + ' L=' + str(omegaL) + ' K=' + str(omegaK))
+    print('Random starting point:  L = ' + str(omegaL) + ', K =' + str(omegaK))
     i = -1
     while i < iterations + 1: #algorithm
         t1 = time.clock()
         i = i + 1
         weight = 1
-        chiSquared1 = likelihood(zcmbArray,omegaM,omegaL)
+        chiSquared1 = likelihood(zcmbArray,0,omegaL)
         logLike1 = np.exp((- 1 / 2) * chiSquared1)
         likeArray.append(chiSquared1)
-        jump(omegaM,omegaL,stepsize) # proposal
-        chiSquared2 = float(likelihood(zcmbArray,omegaMnew,omegaLnew))
+        jump(0,omegaL,stepsize) # proposal
+        chiSquared2 = float(likelihood(zcmbArray,0,omegaLnew))
         logLike2 = np.exp((- 1 / 2) * chiSquared2)
         likeRatio = logLike2/logLike1
         if likeRatio > 1: #MOVE TO PROPOSAL
             decision='ACCEPT'
-            omegaM = omegaMnew
+            omegaM = 0
             omegaL = omegaLnew
-            omegaK = 1 - omegaL - omegaM
+            omegaK = 1 - omegaL
         if likeRatio < 1:
             decision='REJECT/ACCEPT'
             weight = weight + 1 #weight this point
@@ -149,20 +149,21 @@ def start(omegaMmin,omegaMmax,omegaLmin,omegaLmax,stepsize,iterations):
             #check ratio with r
             if likeRatio > r: #algorithm has approved proposal
                 decision='ACCEPT'
-                omegaM = omegaMnew
+                omegaM = 0
                 omegaL = omegaLnew
-                omegaK = 1 - omegaL - omegaM
+                omegaK = 1 - omegaL
             else: #rejected proposal again
                     decision='REJECT'
                     weight = weight + 1 #weight this point
                     i = i + 1
         #ending sequence
-        omegaMArr.append(round(omegaM,5))
+        #omegaMArr.append(round(omegaM,5))
         omegaLArr.append(round(omegaL,5))
         omegaKArr.append(round(omegaK,5))
         wAppend.append(int(weight))
         t2 = time.clock()
-        print('Iteration ' + str(i) + ': ' + ' weight=' + str(weight) + '  time:' + str(round(t2-t1,2))  + '  ' + str(chiSquared1))
+        print('Iteration ' + str(i) + ': ' + ' weight=' + str(weight) + '  time:' + str(round(t2-t1,2))  + '  ' + str(chiSquared1) +  ' OmegaL = ' + str(round(omegaL,3)) + ' OmegaK = ' + str(round(omegaK,3)))
+
         c = c + 1
         #print('weight=' + str(weight) + 'chi^2=' + str(logLike1))
 
@@ -172,7 +173,7 @@ def jump(omegaM,omegaL,stepsize):
     global omegaLnew
     jumpR = abs(random.gauss(0,stepsize))
     jumpTheta = random.uniform(0,2*math.pi)
-    omegaMnew = omegaM + jumpR * math.sin(jumpTheta)
+    omegaMnew = 0
     omegaLnew = omegaL + jumpR * math.cos(jumpTheta)
 
     return omegaMnew,omegaLnew
@@ -184,13 +185,13 @@ omegaL_min = 0.5
 omegaL_max = 0.8
 
 #start sim
-iterations = 100000
+iterations = 5000
 stepsize = 0.05
 t1 = time.clock()
 start(omegaM_min,omegaM_max,omegaL_min,omegaL_max,stepsize,iterations)
 t2 = time.clock()
 print('Time Taken: ' + str(t2 - t1))
 #save results
-data = np.column_stack((omegaMArr,omegaLArr,wAppend))
-outputName = cwd + "/runs/open_" + str(stepsize) + "_" + str(iterations) + ".txt"
-np.savetxt(outputName, data, header='omega_M, omega_L, omega_K' )
+data = np.column_stack((omegaLArr,omegaKArr,wAppend))
+outputName = cwd + "/runs/strange_" + str(stepsize) + "_" + str(iterations) + ".txt"
+np.savetxt(outputName, data, header='omega_M = 0 , omega_L, omega_K' )

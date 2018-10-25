@@ -1,64 +1,66 @@
-import matplotlib.pyplot as plt
+import matplotlib .pyplot as plt
 import numpy as np
 import os
 import math
 import matplotlib.mlab as mlab
 import matplotlib.axes as axes
 from matplotlib import cm
-from mpl_toolkits.mplot3d import Axes3D
 
 print('/n')
 
 cwd = os.getcwd()
 
 ## ADJUST THIS
-fname = cwd + '/runs/2018-10-16_0.022_11000.txt'
+fname = cwd + '/runs/strange_0.05_5000.txt'
 print('file name: ' + fname)
 oCDM = True # else L-CDM
-burn = 7000
+burn = 200
 
-data = np.loadtxt(fname, dtype='float', usecols=(0,1), skiprows=burn)
+data = np.loadtxt(fname, dtype='float', usecols=(0,1,2), skiprows=burn)
 
-omegaM = data[:,0]
-omegaL = data[:,1]
-omegaK = 1 - omegaM - omegaL
+OmegaK = data[:,1]
+OmegaL = data[:,0]
+weight = data[:,2]
 
-if oCDM == True:
-    print('Model: o-CDM')
-else:
-    print('Model: L-CDM')
+weightedOmegaK = OmegaK * weight
+weightedOmegaL = OmegaL * weight
+
+mode = 'strangeCDM'
+print('Starting model: strangeCDM')
 
 samples = len(data)
 print('Burn = ' + str(burn) + ' Samples = ' + str(samples))
 
-meanM = np.mean(omegaM)
-meanL = np.mean(omegaL)
-meanK = np.mean(omegaK)
+meanM = 0
+meanL = sum(weightedOmegaL) / sum(weight)
+meanK =sum(weightedOmegaK) / sum(weight)
 
-stdM = np.std(omegaM)
-stdL = np.std(omegaL)
-stdK = np.std(omegaK)
+stdM = 0
+stdL = np.std(OmegaL)
+stdK = np.std(OmegaK)
 
-varM = np.var(omegaM)
-varL = np.var(omegaL)
-varK = np.var(omegaK)
+varM = 0
+varL = np.var(OmegaL)
+varK = np.var(OmegaK)
 
-covML = np.cov(omegaM, omegaL)
+covML = 0
+covKL = np.cov(weightedOmegaL,weightedOmegaK)
 
-print('Omega_M: mean = ' + str(round(meanM,5)) + ' std = ' + str(round(stdM,5)) + ' var = ' + str(round(varM,5)))
-print('Omega_L: mean = ' + str(round(meanL,5)) + ' std = ' + str(round(stdL,5)) + ' var = ' + str(round(varL,5)))
-print('Omega_K: mean = ' + str(round(meanK,5)) + ' std = ' + str(round(stdK,5)) + ' var = ' + str(round(varK,5)))
+print('Omega_M: mean =  0  std = 0')
+print('Omega_L: mean = ' + str(meanL) + ' std = ' + str(stdL))
+print('Omega_K: mean = ' + str(meanK) + ' std = ' + str(stdK))
 
 N = 1000
-M = np.linspace(0, 1, N)
-L = np.linspace(-1, 2, N)
-M, L = np.meshgrid(M,L)
+M = 0
+L = np.linspace(-1, 3, N)
+K = np.linspace(-1,1,N)
+K, L = np.meshgrid(K,L)
 
-mu = np.array([meanM, meanL])
-Sigma = covML
+mu = np.array([meanK, meanL])
+Sigma = covKL
 
-pos = np.empty(M.shape + (2,))
-pos[:, :, 0] = M
+pos = np.empty(K.shape + (2,))
+pos[:, :, 0] = K
 pos[:, :, 1] = L
 
 def multivariate_gaussian(pos, mu, Sigma):
@@ -83,7 +85,7 @@ Z = multivariate_gaussian(pos, mu, Sigma)
 normalizedZ = (Z - np.min(Z))/(np.max(Z) - np.min(Z))
 
 plt.figure(1)
-plt.contourf(M, L, normalizedZ, [0.05, 0.45, 1], cmap=cm.winter)
+plt.contourf(K, L, normalizedZ, [0.05, 0.45, 1], cmap=cm.winter)
 
 x = np.linspace(0,5,10)
 y1 = 1 - x
@@ -91,15 +93,15 @@ plt.plot(x,y1,'k')
 
 y2 = 0.5 * x
 plt.plot(x,y2,'k--')
-plt.xlim(0,1)
-plt.ylim(0,2)
-plt.xlabel("$\Omega_{\mathrm{M}}$")
+plt.xlim(0,1.6)
+plt.ylim(0,2.4)
+plt.title('$o$CDM Constraints')
+plt.xlabel("$\Omega_{\mathrm{c}}$")
 plt.ylabel("$\Omega_{\Lambda}$")
 plt.axes()
-plt.tick_params(direction='in')
 
-step = np.arange(0,len(omegaM))
-
+step = np.arange(0,len(OmegaK))
+'''
 plt.figure(2)
 plt.plot(step,omegaM)
 plt.title('Random walk')
@@ -117,5 +119,4 @@ plt.plot(step,omegaK)
 plt.title('Random walk')
 plt.ylabel("$\Omega_k$")
 plt.xlabel('Steps (#)')
-
-plt.show()
+'''
